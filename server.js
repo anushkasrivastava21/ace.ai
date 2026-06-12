@@ -1,13 +1,14 @@
 const express = require('express')
 const cors = require('cors')
 require('dotenv').config()
-console.log('MONGO_URI:', process.env.MONGO_URI)
+
 const connectDB = require('./config/db')
 const logger = require('./middleware/logger')
 const validateJSON = require('./middleware/validateJSON')
 const materialsRoute = require('./routes/materials')
 const generateRoute = require('./routes/generate')
 const reviewRoute = require('./routes/review')
+const authRoute = require('./routes/auth')
 
 // Connect to MongoDB first
 connectDB()
@@ -25,6 +26,7 @@ app.use(validateJSON)
 app.use('/api/materials', materialsRoute)
 app.use('/api/generate', generateRoute)
 app.use('/api/review', reviewRoute)
+app.use('/api/auth', authRoute)
 
 // Health check
 app.get('/', (req, res) => {
