@@ -20,7 +20,7 @@ const Configure = () => {
 
         try {
             const response = await axios.post('http://localhost:3000/api/generate/paper', examConfig)
-            setGeneratedPaper(response.data)
+            setGeneratedPaper(response.data.paper)
             setStatus('Paper generated! Go to Exam page.')
         } catch (error) {
             setStatus('Generation failed. Try again.')

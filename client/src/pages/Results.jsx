@@ -1,7 +1,7 @@
 import { useExam } from '../context/ExamContext'
 
 const Results = () => {
-    const { attempts } = useExam()
+    const { attempts, generatedPaper } = useExam()
 
     if (attempts.length === 0) {
         return (
@@ -25,14 +25,20 @@ const Results = () => {
             </div>
 
             <h2>Question Review</h2>
-            {latestAttempt.answers?.map((answer, index) => (
-                <div key={index} style={{ border: '1px solid white', padding: '15px', margin: '10px 0' }}>
-                    <p><strong>Question {index + 1}</strong></p>
-                    <p>Your Answer: {answer.userAnswer || 'No answer given'}</p>
-                    <p>Score: {answer.score || 0}</p>
-                    <p>Feedback: {answer.feedback || 'Awaiting AI review (Stage 6)'}</p>
-                </div>
-            ))}
+            {latestAttempt.answers?.map((answer, index) => {
+                const matchedQuestion = generatedPaper?.questions?.find(
+                    q => q._id === answer.questionId || q._id?.toString() === answer.questionId
+                )
+
+                return (
+                    <div key={index} style={{ border: '1px solid white', padding: '15px', margin: '10px 0' }}>
+                        <p><strong>Q{index + 1}: {matchedQuestion?.question || '(Question text unavailable)'}</strong></p>
+                        <p>Your Answer: {answer.userAnswer || 'No answer given'}</p>
+                        <p>Score: {answer.score || 0}</p>
+                        <p>Feedback: {answer.feedback || 'Awaiting AI review (Stage 6)'}</p>
+                    </div>
+                )
+            })}
         </div>
     )
 }

@@ -18,4 +18,36 @@ const generate = async (prompt) => {
     }
 }
 
-module.exports = { generate }
+// Parses JSON from LLM response, handling common formatting issues
+const parseJSONResponse = (text) => {
+    let cleaned = text.trim()
+    cleaned = cleaned.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+
+    const start = cleaned.indexOf('[')
+    const end = cleaned.lastIndexOf(']')
+
+    if (start === -1 || end === -1) {
+        throw new Error('No JSON array found in LLM response')
+    }
+
+    const jsonString = cleaned.substring(start, end + 1)
+    return JSON.parse(jsonString)
+}
+
+// Parses a single JSON object from LLM response
+const parseJSONObject = (text) => {
+    let cleaned = text.trim()
+    cleaned = cleaned.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+
+    const start = cleaned.indexOf('{')
+    const end = cleaned.lastIndexOf('}')
+
+    if (start === -1 || end === -1) {
+        throw new Error('No JSON object found in LLM response')
+    }
+
+    const jsonString = cleaned.substring(start, end + 1)
+    return JSON.parse(jsonString)
+}
+
+module.exports = { generate, parseJSONResponse, parseJSONObject }

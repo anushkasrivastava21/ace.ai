@@ -1,5 +1,10 @@
 const mongoose = require('mongoose')
 
+const chunkSchema = new mongoose.Schema({
+    text: String,
+    embedding: [Number]   // array of numbers representing the chunk's meaning
+})
+
 const materialSchema = new mongoose.Schema({
     filename: {
         type: String,
@@ -9,6 +14,7 @@ const materialSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    chunks: [chunkSchema],
     topics: {
         type: [String],
         default: []

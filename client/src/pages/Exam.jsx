@@ -58,7 +58,7 @@ const Exam = () => {
                 answers: formattedAnswers
             })
 
-            setAttempts((prev) => [...prev, response.data])
+            setAttempts((prev) => [...prev, response.data.attempt])
             setSubmitted(true)
             setStatus('Submitted! Go to Results page.')
         } catch (error) {

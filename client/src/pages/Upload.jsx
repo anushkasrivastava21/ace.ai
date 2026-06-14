@@ -3,31 +3,31 @@ import axios from 'axios'
 import { useExam } from '../context/ExamContext'
 
 const Upload = () => {
-    const [filename, setFilename] = useState('')
-    const [originalText, setOriginalText] = useState('')
+    const [file, setFile] = useState(null)
     const [status, setStatus] = useState('')
     const { materials, setMaterials } = useExam()
 
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!filename || !originalText) {
-            setStatus('Please fill in both fields')
+        if (!file) {
+            setStatus('Please select a PDF file')
             return
         }
 
+        const formData = new FormData()
+        formData.append('file', file)
+
         try {
-            const response = await axios.post('http://localhost:3000/api/materials/upload', {
-                filename,
-                originalText
+            const response = await axios.post('http://localhost:3000/api/materials/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             })
 
             setMaterials([...materials, response.data.material])
             setStatus('Material uploaded successfully!')
-            setFilename('')
-            setOriginalText('')
+            setFile(null)
         } catch (error) {
-            setStatus('Upload failed. Try again.')
+            setStatus(error.response?.data?.error || 'Upload failed. Try again.')
         }
     }
 
@@ -37,24 +37,11 @@ const Upload = () => {
 
             <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '10px' }}>
-                    <label>Filename</label><br />
+                    <label>Select PDF</label><br />
                     <input
-                        type="text"
-                        value={filename}
-                        onChange={(e) => setFilename(e.target.value)}
-                        placeholder="e.g. algorithms-notes.pdf"
-                        style={{ width: '100%', padding: '8px' }}
-                    />
-                </div>
-
-                <div style={{ marginBottom: '10px' }}>
-                    <label>Content</label><br />
-                    <textarea
-                        value={originalText}
-                        onChange={(e) => setOriginalText(e.target.value)}
-                        placeholder="Paste your notes here..."
-                        rows="6"
-                        style={{ width: '100%', padding: '8px' }}
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => setFile(e.target.files[0])}
                     />
                 </div>
 
@@ -67,6 +54,7 @@ const Upload = () => {
             {materials.map((material) => (
                 <div key={material._id} style={{ border: '1px solid white', padding: '10px', margin: '10px 0' }}>
                     <h3>{material.filename}</h3>
+                    <p>{material.originalText?.substring(0, 100)}...</p>
                 </div>
             ))}
         </div>
