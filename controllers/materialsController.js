@@ -3,11 +3,9 @@ const { extractText } = require('../agent/pdfParser')
 const { chunkText } = require('../agent/chunker')
 const { generateEmbedding } = require('../agent/embedder')
 
-// READ ALL — GET /api/materials
 const getAllMaterials = async (req, res) => {
     try {
-        // Exclude embeddings from the list view — they're huge and not needed for display
-        const materials = await Material.find().select('-chunks.embedding')
+        const materials = await Material.find({ userId: req.userId }).select('-chunks.embedding')
         res.status(200).json({
             count: materials.length,
             materials
@@ -17,7 +15,6 @@ const getAllMaterials = async (req, res) => {
     }
 }
 
-// CREATE — POST /api/materials/upload
 const uploadMaterial = async (req, res) => {
     try {
         if (!req.file) {
@@ -27,6 +24,17 @@ const uploadMaterial = async (req, res) => {
         const { materialType } = req.body
         const validTypes = ['notes', 'previous_paper']
         const resolvedType = validTypes.includes(materialType) ? materialType : 'notes'
+
+        // Parse tags from FormData (sent as JSON string)
+        let tags = []
+        try {
+            tags = JSON.parse(req.body.tags || '[]')
+            if (!Array.isArray(tags)) tags = []
+            // Clean: trim, lowercase, remove empties, deduplicate
+            tags = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(t => t.length > 0))]
+        } catch {
+            tags = []
+        }
 
         const originalText = await extractText(req.file.buffer)
 
@@ -43,9 +51,11 @@ const uploadMaterial = async (req, res) => {
         }
 
         const material = new Material({
+            userId: req.userId,
             filename: req.file.originalname,
             originalText,
             materialType: resolvedType,
+            topics: tags,
             chunks
         })
         await material.save()
@@ -57,6 +67,7 @@ const uploadMaterial = async (req, res) => {
                 filename: material.filename,
                 originalText: material.originalText,
                 materialType: material.materialType,
+                topics: material.topics,
                 chunkCount: chunks.length,
                 uploadedAt: material.uploadedAt
             }
@@ -66,10 +77,9 @@ const uploadMaterial = async (req, res) => {
     }
 }
 
-// DELETE — DELETE /api/materials/:id
 const deleteMaterial = async (req, res) => {
     try {
-        const material = await Material.findByIdAndDelete(req.params.id)
+        const material = await Material.findOneAndDelete({ _id: req.params.id, userId: req.userId })
 
         if (!material) {
             return res.status(404).json({ error: 'Material not found' })

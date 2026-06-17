@@ -2,10 +2,15 @@ const mongoose = require('mongoose')
 
 const chunkSchema = new mongoose.Schema({
     text: String,
-    embedding: [Number]   // array of numbers representing the chunk's meaning
+    embedding: [Number]
 })
 
 const materialSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     filename: {
         type: String,
         required: true

@@ -8,6 +8,11 @@ const answerSchema = new mongoose.Schema({
 })
 
 const attemptSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     paperId: mongoose.Schema.Types.ObjectId,
     answers: [answerSchema],
     totalScore: Number,

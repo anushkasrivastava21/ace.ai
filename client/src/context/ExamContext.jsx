@@ -1,19 +1,44 @@
-import { createContext, useState, useContext } from 'react'
+import { createContext, useState, useContext, useEffect } from 'react'
+import axios from 'axios'
+import { useAuth } from './AuthContext'
 
-// 1. Create the context
 const ExamContext = createContext()
 
-// 2. Create the provider — wraps your app and holds the data
 export const ExamProvider = ({ children }) => {
+    const { token } = useAuth()
     const [materials, setMaterials] = useState([])
     const [examConfig, setExamConfig] = useState({
-        subject: '',
+        materialIds: [],
         difficulty: 'medium',
         count: 10,
-        type: 'mcq'
+        type: 'mcq',
+        mode: 'single',
+        typeCounts: { mcq: 5, short: 3, long: 2 },
+        paperStrategy: 'material_only'
     })
     const [generatedPaper, setGeneratedPaper] = useState(null)
     const [attempts, setAttempts] = useState([])
+
+    // Fetch user's materials when logged in or on page refresh
+    useEffect(() => {
+        if (!token) {
+            setMaterials([])
+            setGeneratedPaper(null)
+            setAttempts([])
+            return
+        }
+
+        const fetchMaterials = async () => {
+            try {
+                const response = await axios.get('http://localhost:3000/api/materials')
+                setMaterials(response.data.materials)
+            } catch (error) {
+                console.error('Failed to fetch materials:', error.message)
+            }
+        }
+
+        fetchMaterials()
+    }, [token])
 
     return (
         <ExamContext.Provider value={{
@@ -27,5 +52,4 @@ export const ExamProvider = ({ children }) => {
     )
 }
 
-// 3. Custom hook — makes using context clean and simple
 export const useExam = () => useContext(ExamContext)

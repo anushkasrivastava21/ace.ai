@@ -1,10 +1,11 @@
 const express = require('express')
 const router = express.Router()
 const upload = require('../middleware/upload')
-const { getAllMaterials, uploadMaterial, deleteMaterial } = require('../controllers/materialsController')
+const authenticate = require('../middleware/auth')
+const { getAllMaterials, uploadMaterial, deleteMaterial } = require('../controllers/materialscontroller')
 
-router.get('/', getAllMaterials)
-router.post('/upload', upload.single('file'), uploadMaterial)
-router.delete('/:id', deleteMaterial)
+router.get('/', authenticate, getAllMaterials)
+router.post('/upload', authenticate, upload.single('file'), uploadMaterial)
+router.delete('/:id', authenticate, deleteMaterial)
 
 module.exports = router
