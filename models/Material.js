@@ -14,6 +14,11 @@ const materialSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    materialType: {
+        type: String,
+        enum: ['notes', 'previous_paper'],
+        default: 'notes'
+    },
     chunks: [chunkSchema],
     topics: {
         type: [String],

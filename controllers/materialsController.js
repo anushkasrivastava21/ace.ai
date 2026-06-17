@@ -24,6 +24,10 @@ const uploadMaterial = async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' })
         }
 
+        const { materialType } = req.body
+        const validTypes = ['notes', 'previous_paper']
+        const resolvedType = validTypes.includes(materialType) ? materialType : 'notes'
+
         const originalText = await extractText(req.file.buffer)
 
         if (!originalText || originalText.trim().length === 0) {
@@ -41,6 +45,7 @@ const uploadMaterial = async (req, res) => {
         const material = new Material({
             filename: req.file.originalname,
             originalText,
+            materialType: resolvedType,
             chunks
         })
         await material.save()
@@ -51,6 +56,7 @@ const uploadMaterial = async (req, res) => {
                 _id: material._id,
                 filename: material.filename,
                 originalText: material.originalText,
+                materialType: material.materialType,
                 chunkCount: chunks.length,
                 uploadedAt: material.uploadedAt
             }

@@ -75,6 +75,9 @@ const Exam = () => {
         )
     }
 
+    const currentQuestion = questions[currentQ]
+    const hasMCQOptions = currentQuestion.options && currentQuestion.options.length > 0
+
     return (
         <div style={{ padding: '20px', maxWidth: '600px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -105,14 +108,44 @@ const Exam = () => {
             {/* Current Question */}
             <div style={{ border: '1px solid white', padding: '20px', marginBottom: '20px' }}>
                 <p>Question {currentQ + 1} of {questions.length}</p>
-                <h3>{questions[currentQ].question}</h3>
-                <textarea
-                    value={answers[questions[currentQ]._id] || ''}
-                    onChange={(e) => handleAnswer(questions[currentQ]._id, e.target.value)}
-                    placeholder="Type your answer here..."
-                    rows="5"
-                    style={{ width: '100%', padding: '8px', marginTop: '10px' }}
-                />
+                <h3>{currentQuestion.question}</h3>
+
+                {hasMCQOptions ? (
+                    <div style={{ marginTop: '10px' }}>
+                        {currentQuestion.options.map((option, i) => (
+                            <label
+                                key={i}
+                                style={{
+                                    display: 'block',
+                                    padding: '8px',
+                                    margin: '5px 0',
+                                    border: '1px solid white',
+                                    cursor: 'pointer',
+                                    background: answers[currentQuestion._id] === option ? 'white' : 'transparent',
+                                    color: answers[currentQuestion._id] === option ? 'black' : 'white'
+                                }}
+                            >
+                                <input
+                                    type="radio"
+                                    name={`question-${currentQuestion._id}`}
+                                    value={option}
+                                    checked={answers[currentQuestion._id] === option}
+                                    onChange={(e) => handleAnswer(currentQuestion._id, e.target.value)}
+                                    style={{ marginRight: '10px' }}
+                                />
+                                {option}
+                            </label>
+                        ))}
+                    </div>
+                ) : (
+                    <textarea
+                        value={answers[currentQuestion._id] || ''}
+                        onChange={(e) => handleAnswer(currentQuestion._id, e.target.value)}
+                        placeholder="Type your answer here..."
+                        rows="5"
+                        style={{ width: '100%', padding: '8px', marginTop: '10px' }}
+                    />
+                )}
             </div>
 
             {/* Navigation + Submit */}

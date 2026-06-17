@@ -6,24 +6,42 @@ const { generate, parseJSONResponse } = require('../agent/llm')
 
 const generatePaper = async (req, res) => {
     try {
-        const { subject, difficulty, count, type } = req.body
+        const { subject, difficulty, count, type, paperStrategy } = req.body
 
         if (!subject || !difficulty || !count || !type) {
             return res.status(400).json({ error: 'subject, difficulty, count and type are required' })
         }
 
-        // Get all materials with chunks
-        const materials = await Material.find({ 'chunks.0': { $exists: true } })
+        // Get notes materials with chunks
+        const notesMaterials = await Material.find({
+            'chunks.0': { $exists: true },
+            materialType: { $ne: 'previous_paper' }
+        })
 
-        if (materials.length === 0) {
-            return res.status(400).json({ error: 'No processed materials found. Upload a PDF first.' })
+        if (notesMaterials.length === 0) {
+            return res.status(400).json({ error: 'No processed study materials found. Upload a PDF first.' })
         }
 
-        // Retrieve relevant chunks based on subject
-        const relevantChunks = await retrieveRelevantChunks(subject, materials, 5)
+        // Retrieve relevant chunks from notes
+        const relevantChunks = await retrieveRelevantChunks(subject, notesMaterials, 5)
 
-        // Build prompt
-        const prompt = buildGenerationPrompt(relevantChunks, { type, difficulty, count })
+        // If a PYQ strategy is active, fetch PYQ chunks too
+        let pyqChunks = []
+        const strategy = paperStrategy || 'material_only'
+
+        if (strategy !== 'material_only') {
+            const pyqMaterials = await Material.find({
+                'chunks.0': { $exists: true },
+                materialType: 'previous_paper'
+            })
+
+            if (pyqMaterials.length > 0) {
+                pyqChunks = await retrieveRelevantChunks(subject, pyqMaterials, 3)
+            }
+        }
+
+        // Build prompt with strategy and PYQ context
+        const prompt = buildGenerationPrompt(relevantChunks, { type, difficulty, count }, strategy, pyqChunks)
 
         // Call Ollama
         const rawResponse = await generate(prompt)

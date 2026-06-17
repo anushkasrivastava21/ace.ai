@@ -5,9 +5,18 @@ import { useExam } from '../context/ExamContext'
 const Configure = () => {
     const { materials, examConfig, setExamConfig, setGeneratedPaper } = useExam()
     const [status, setStatus] = useState('')
+    const [loading, setLoading] = useState(false)
+
+    const hasPYQs = materials.some(m => m.materialType === 'previous_paper')
 
     const handleChange = (field, value) => {
-        setExamConfig({ ...examConfig, [field]: value })
+        if (field === 'paperStrategy' && value === 'follow_pattern') {
+            setExamConfig({ ...examConfig, [field]: value, type: 'auto' })
+        } else if (field === 'paperStrategy' && value !== 'follow_pattern' && examConfig.type === 'auto') {
+            setExamConfig({ ...examConfig, [field]: value, type: 'mcq' })
+        } else {
+            setExamConfig({ ...examConfig, [field]: value })
+        }
     }
 
     const handleGenerate = async (e) => {
@@ -18,6 +27,9 @@ const Configure = () => {
             return
         }
 
+        setLoading(true)
+        setStatus('Generating paper... this may take 1-2 minutes.')
+
         try {
             const response = await axios.post('http://localhost:3000/api/generate/paper', examConfig)
             setGeneratedPaper(response.data.paper)
@@ -25,6 +37,8 @@ const Configure = () => {
         } catch (error) {
             setStatus('Generation failed. Try again.')
         }
+
+        setLoading(false)
     }
 
     return (
@@ -48,18 +62,20 @@ const Configure = () => {
                     </select>
                 </div>
 
-                <div style={{ marginBottom: '10px' }}>
-                    <label>Question Type</label><br />
-                    <select
-                        value={examConfig.type}
-                        onChange={(e) => handleChange('type', e.target.value)}
-                        style={{ width: '100%', padding: '8px' }}
-                    >
-                        <option value="mcq">Multiple Choice</option>
-                        <option value="short">Short Answer</option>
-                        <option value="long">Long Answer</option>
-                    </select>
-                </div>
+                {examConfig.paperStrategy !== 'follow_pattern' && (
+                    <div style={{ marginBottom: '10px' }}>
+                        <label>Question Type</label><br />
+                        <select
+                            value={examConfig.type}
+                            onChange={(e) => handleChange('type', e.target.value)}
+                            style={{ width: '100%', padding: '8px' }}
+                        >
+                            <option value="mcq">Multiple Choice</option>
+                            <option value="short">Short Answer</option>
+                            <option value="long">Long Answer</option>
+                        </select>
+                    </div>
+                )}
 
                 <div style={{ marginBottom: '10px' }}>
                     <label>Difficulty</label><br />
@@ -86,7 +102,24 @@ const Configure = () => {
                     />
                 </div>
 
-                <button type="submit">Generate Paper</button>
+                {hasPYQs && (
+                    <div style={{ marginBottom: '10px' }}>
+                        <label>Previous Year Paper Strategy</label><br />
+                        <select
+                            value={examConfig.paperStrategy}
+                            onChange={(e) => handleChange('paperStrategy', e.target.value)}
+                            style={{ width: '100%', padding: '8px' }}
+                        >
+                            <option value="material_only">Use as study material only</option>
+                            <option value="follow_pattern">Follow same paper pattern</option>
+                            <option value="similar_questions">Include similar style questions</option>
+                        </select>
+                    </div>
+                )}
+
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Generating...' : 'Generate Paper'}
+                </button>
             </form>
 
             {status && <p>{status}</p>}
