@@ -24,7 +24,22 @@ const reviewAnswers = async (req, res) => {
                 const isMCQ = question.options && question.options.length > 0
 
                 if (isMCQ) {
-                    const correct = (userAnswer.userAnswer || '').trim().toLowerCase() === (question.answer || '').trim().toLowerCase()
+                    const userAns = (userAnswer.userAnswer || '').trim().toLowerCase()
+                    const correctAns = (question.answer || '').trim().toLowerCase()
+
+                    // If either answer is empty, can't be correct
+                    if (!userAns || !correctAns) {
+                        return {
+                            questionId: userAnswer.questionId,
+                            userAnswer: userAnswer.userAnswer,
+                            score: 0,
+                            feedback: !userAns
+                                ? `No answer provided. The correct answer is: ${question.answer || 'Not available'}`
+                                : 'Could not verify — correct answer missing from paper.'
+                        }
+                    }
+
+                    const correct = userAns === correctAns
                     return {
                         questionId: userAnswer.questionId,
                         userAnswer: userAnswer.userAnswer,

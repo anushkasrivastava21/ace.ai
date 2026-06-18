@@ -15,6 +15,10 @@ const paperSchema = new mongoose.Schema({
         required: true
     },
     materialId: mongoose.Schema.Types.ObjectId,
+    name: {
+        type: String,
+        default: ''
+    },
     config: {
         type: { type: String },
         difficulty: String,
@@ -26,7 +30,11 @@ const paperSchema = new mongoose.Schema({
             short: Number,
             long: Number
         },
-        materialIds: [mongoose.Schema.Types.ObjectId]
+        materialIds: [mongoose.Schema.Types.ObjectId],
+        timerMinutes: {
+            type: Number,
+            default: 30
+        }
     },
     questions: [questionSchema],
     generatedAt: {

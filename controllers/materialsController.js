@@ -25,12 +25,10 @@ const uploadMaterial = async (req, res) => {
         const validTypes = ['notes', 'previous_paper']
         const resolvedType = validTypes.includes(materialType) ? materialType : 'notes'
 
-        // Parse tags from FormData (sent as JSON string)
         let tags = []
         try {
             tags = JSON.parse(req.body.tags || '[]')
             if (!Array.isArray(tags)) tags = []
-            // Clean: trim, lowercase, remove empties, deduplicate
             tags = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(t => t.length > 0))]
         } catch {
             tags = []
@@ -77,6 +75,30 @@ const uploadMaterial = async (req, res) => {
     }
 }
 
+const renameMaterial = async (req, res) => {
+    try {
+        const { filename } = req.body
+
+        if (!filename || !filename.trim()) {
+            return res.status(400).json({ error: 'Filename is required' })
+        }
+
+        const material = await Material.findOneAndUpdate(
+            { _id: req.params.id, userId: req.userId },
+            { filename: filename.trim() },
+            { new: true }
+        ).select('-chunks.embedding')
+
+        if (!material) {
+            return res.status(404).json({ error: 'Material not found' })
+        }
+
+        res.status(200).json({ message: 'Material renamed!', material })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+}
+
 const deleteMaterial = async (req, res) => {
     try {
         const material = await Material.findOneAndDelete({ _id: req.params.id, userId: req.userId })
@@ -91,4 +113,4 @@ const deleteMaterial = async (req, res) => {
     }
 }
 
-module.exports = { getAllMaterials, uploadMaterial, deleteMaterial }
+module.exports = { getAllMaterials, uploadMaterial, renameMaterial, deleteMaterial }

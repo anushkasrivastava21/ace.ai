@@ -1,23 +1,53 @@
+import { useState } from 'react'
+import axios from 'axios'
 import { useExam } from '../context/ExamContext'
 
 const Materials = () => {
-    const { materials } = useExam()
+    const { materials, setMaterials } = useExam()
+    const [editingId, setEditingId] = useState(null)
+    const [editName, setEditName] = useState('')
 
     const notesMaterials = materials.filter(m => m.materialType !== 'previous_paper')
     const pyqMaterials = materials.filter(m => m.materialType === 'previous_paper')
 
+    const startEdit = (material) => {
+        setEditingId(material._id)
+        setEditName(material.filename)
+    }
+
+    const cancelEdit = () => {
+        setEditingId(null)
+        setEditName('')
+    }
+
+    const saveEdit = async (id) => {
+        if (!editName.trim()) return
+
+        try {
+            const response = await axios.put(`http://localhost:3000/api/materials/${id}`, {
+                filename: editName.trim()
+            })
+            setMaterials(materials.map(m =>
+                m._id === id ? { ...m, filename: response.data.material.filename } : m
+            ))
+            setEditingId(null)
+            setEditName('')
+        } catch (error) {
+            console.error('Rename failed:', error.message)
+        }
+    }
+
+    const handleKeyDown = (e, id) => {
+        if (e.key === 'Enter') saveEdit(id)
+        if (e.key === 'Escape') cancelEdit()
+    }
+
     if (materials.length === 0) {
         return (
             <div style={{ textAlign: 'center', paddingTop: '80px' }}>
-                <div className="stamp stamp-red" style={{ fontSize: '11px', marginBottom: '32px' }}>
-                    Empty Archive
-                </div>
-                <h1 className="font-stamp" style={{ fontSize: '28px', color: 'var(--ink)', marginBottom: '12px' }}>
-                    No Materials Found
-                </h1>
-                <p className="font-accent" style={{ fontSize: '14px', color: 'var(--graphite)', marginBottom: '32px' }}>
-                    Upload study materials to begin building your archive.
-                </p>
+                <div className="stamp stamp-red" style={{ fontSize: '11px', marginBottom: '32px' }}>Empty Archive</div>
+                <h1 className="font-stamp" style={{ fontSize: '28px', color: 'var(--ink)', marginBottom: '12px' }}>No Materials Found</h1>
+                <p className="font-accent" style={{ fontSize: '14px', color: 'var(--graphite)', marginBottom: '32px' }}>Upload study materials to begin building your archive.</p>
                 <a href="/upload" style={{ textDecoration: 'none' }}>
                     <button className="btn" style={{ padding: '12px 32px' }}>Upload Material →</button>
                 </a>
@@ -25,110 +55,101 @@ const Materials = () => {
         )
     }
 
-    const MaterialCard = ({ material }) => (
-        <div style={{
-            borderLeft: `3px solid ${material.materialType === 'previous_paper' ? 'var(--red)' : 'var(--graphite)'}`,
-            padding: '14px 18px',
-            marginBottom: '12px',
-            background: 'var(--manila-light)'
-        }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <p style={{
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    color: 'var(--ink)',
-                    marginBottom: '4px'
-                }}>
-                    {material.filename}
-                </p>
-                <span style={{
-                    fontSize: '10px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                    padding: '2px 8px',
-                    border: '1px solid',
-                    borderColor: material.materialType === 'previous_paper' ? 'var(--red)' : 'var(--manila-dark)',
-                    color: material.materialType === 'previous_paper' ? 'var(--red)' : 'var(--graphite)',
-                    fontFamily: 'var(--font-body)',
-                    flexShrink: 0
-                }}>
-                    {material.materialType === 'previous_paper' ? 'PYQ' : 'Notes'}
-                </span>
-            </div>
+    const MaterialCard = ({ material }) => {
+        const isEditing = editingId === material._id
 
-            {material.topics && material.topics.length > 0 && (
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    {material.topics.map(t => (
-                        <span key={t} style={{
-                            fontSize: '10px',
-                            padding: '2px 8px',
-                            background: 'var(--ink)',
-                            color: 'var(--manila)',
-                            fontFamily: 'var(--font-body)',
-                            letterSpacing: '0.5px'
-                        }}>
-                            {t}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            <p style={{
-                fontSize: '12px',
-                color: 'var(--graphite)',
-                marginTop: '8px',
-                lineHeight: '1.5'
+        return (
+            <div style={{
+                borderLeft: `3px solid ${material.materialType === 'previous_paper' ? 'var(--red)' : 'var(--graphite)'}`,
+                padding: '14px 18px',
+                marginBottom: '12px',
+                background: 'var(--manila-light)'
             }}>
-                {material.originalText?.substring(0, 150)}...
-            </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    {isEditing ? (
+                        <div style={{ flex: 1, marginRight: '10px' }}>
+                            <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, material._id)}
+                                className="input"
+                                style={{ fontSize: '13px', padding: '6px 8px', marginBottom: '6px' }}
+                                autoFocus
+                            />
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <button onClick={() => saveEdit(material._id)} className="btn" style={{ padding: '3px 12px', fontSize: '10px' }}>Save</button>
+                                <button onClick={cancelEdit} style={{
+                                    padding: '3px 12px', fontSize: '10px', fontFamily: 'var(--font-body)',
+                                    textTransform: 'uppercase', letterSpacing: '1px', border: '1px solid var(--manila-dark)',
+                                    background: 'transparent', color: 'var(--graphite)', cursor: 'pointer'
+                                }}>Cancel</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--ink)', marginBottom: '4px' }}>
+                                    {material.filename}
+                                </p>
+                                <button
+                                    onClick={() => startEdit(material)}
+                                    style={{
+                                        background: 'none', border: 'none', cursor: 'pointer',
+                                        fontSize: '12px', color: 'var(--graphite)', padding: '2px',
+                                        opacity: 0.6, transition: 'opacity 0.15s'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6' }}
+                                    title="Rename"
+                                >
+                                    ✎
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
-            {material.chunkCount && (
-                <p style={{
-                    fontSize: '10px',
-                    color: 'var(--graphite)',
-                    marginTop: '6px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px'
-                }}>
-                    {material.chunkCount} chunks processed
+                    <span style={{
+                        fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px',
+                        padding: '2px 8px', border: '1px solid',
+                        borderColor: material.materialType === 'previous_paper' ? 'var(--red)' : 'var(--manila-dark)',
+                        color: material.materialType === 'previous_paper' ? 'var(--red)' : 'var(--graphite)',
+                        fontFamily: 'var(--font-body)', flexShrink: 0
+                    }}>
+                        {material.materialType === 'previous_paper' ? 'PYQ' : 'Notes'}
+                    </span>
+                </div>
+
+                {material.topics && material.topics.length > 0 && (
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '8px' }}>
+                        {material.topics.map(t => (
+                            <span key={t} style={{
+                                fontSize: '10px', padding: '2px 8px', background: 'var(--ink)',
+                                color: 'var(--manila)', fontFamily: 'var(--font-body)', letterSpacing: '0.5px'
+                            }}>{t}</span>
+                        ))}
+                    </div>
+                )}
+
+                <p style={{ fontSize: '12px', color: 'var(--graphite)', marginTop: '8px', lineHeight: '1.5' }}>
+                    {material.originalText?.substring(0, 150)}...
                 </p>
-            )}
-        </div>
-    )
+            </div>
+        )
+    }
 
     return (
         <div style={{ maxWidth: '600px' }}>
-
-            <div className="stamp stamp-red" style={{ fontSize: '11px', marginBottom: '28px' }}>
-                Archive
-            </div>
-
-            <h1 className="font-stamp" style={{
-                fontSize: '28px',
-                color: 'var(--ink)',
-                marginBottom: '8px'
-            }}>
-                My Materials
-            </h1>
-
-            <p className="font-accent" style={{
-                fontSize: '14px',
-                color: 'var(--graphite)',
-                marginBottom: '32px'
-            }}>
+            <div className="stamp stamp-red" style={{ fontSize: '11px', marginBottom: '28px' }}>Archive</div>
+            <h1 className="font-stamp" style={{ fontSize: '28px', color: 'var(--ink)', marginBottom: '8px' }}>My Materials</h1>
+            <p className="font-accent" style={{ fontSize: '14px', color: 'var(--graphite)', marginBottom: '32px' }}>
                 {materials.length} document{materials.length !== 1 ? 's' : ''} in your classified archive.
             </p>
 
-            {/* Study Notes section */}
             {notesMaterials.length > 0 && (
                 <div style={{ marginBottom: '32px' }}>
                     <div style={{ borderTop: '1px solid var(--manila-dark)', paddingTop: '20px' }}>
-                        <h2 className="font-stamp" style={{
-                            fontSize: '14px',
-                            color: 'var(--ink)',
-                            letterSpacing: '2px',
-                            marginBottom: '16px'
-                        }}>
+                        <h2 className="font-stamp" style={{ fontSize: '14px', color: 'var(--ink)', letterSpacing: '2px', marginBottom: '16px' }}>
                             Study Materials ({notesMaterials.length})
                         </h2>
                         {notesMaterials.map(m => <MaterialCard key={m._id} material={m} />)}
@@ -136,16 +157,10 @@ const Materials = () => {
                 </div>
             )}
 
-            {/* PYQ section */}
             {pyqMaterials.length > 0 && (
                 <div style={{ marginBottom: '32px' }}>
                     <div style={{ borderTop: '1px solid var(--manila-dark)', paddingTop: '20px' }}>
-                        <h2 className="font-stamp" style={{
-                            fontSize: '14px',
-                            color: 'var(--red)',
-                            letterSpacing: '2px',
-                            marginBottom: '16px'
-                        }}>
+                        <h2 className="font-stamp" style={{ fontSize: '14px', color: 'var(--red)', letterSpacing: '2px', marginBottom: '16px' }}>
                             Previous Year Papers ({pyqMaterials.length})
                         </h2>
                         {pyqMaterials.map(m => <MaterialCard key={m._id} material={m} />)}
@@ -153,15 +168,9 @@ const Materials = () => {
                 </div>
             )}
 
-            <div style={{
-                borderTop: '1px solid var(--manila-dark)',
-                paddingTop: '24px',
-                textAlign: 'center'
-            }}>
+            <div style={{ borderTop: '1px solid var(--manila-dark)', paddingTop: '24px', textAlign: 'center' }}>
                 <a href="/upload" style={{ textDecoration: 'none' }}>
-                    <button className="btn" style={{ padding: '12px 32px' }}>
-                        Upload More Material →
-                    </button>
+                    <button className="btn" style={{ padding: '12px 32px' }}>Upload More Material →</button>
                 </a>
             </div>
         </div>

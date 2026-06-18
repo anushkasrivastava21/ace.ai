@@ -14,12 +14,12 @@ export const ExamProvider = ({ children }) => {
         type: 'mcq',
         mode: 'single',
         typeCounts: { mcq: 5, short: 3, long: 2 },
-        paperStrategy: 'material_only'
+        paperStrategy: 'material_only',
+        timerMinutes: 30
     })
     const [generatedPaper, setGeneratedPaper] = useState(null)
     const [attempts, setAttempts] = useState([])
 
-    // Fetch user's materials when logged in or on page refresh
     useEffect(() => {
         if (!token) {
             setMaterials([])
@@ -28,16 +28,25 @@ export const ExamProvider = ({ children }) => {
             return
         }
 
-        const fetchMaterials = async () => {
+        const fetchData = async () => {
             try {
-                const response = await axios.get('http://localhost:3000/api/materials')
-                setMaterials(response.data.materials)
+                const materialsRes = await axios.get('http://localhost:3000/api/materials')
+                setMaterials(materialsRes.data.materials)
             } catch (error) {
                 console.error('Failed to fetch materials:', error.message)
             }
+
+            try {
+                const paperRes = await axios.get('http://localhost:3000/api/generate/paper/latest')
+                if (paperRes.data.paper) {
+                    setGeneratedPaper(paperRes.data.paper)
+                }
+            } catch (error) {
+                console.error('Failed to fetch latest paper:', error.message)
+            }
         }
 
-        fetchMaterials()
+        fetchData()
     }, [token])
 
     return (

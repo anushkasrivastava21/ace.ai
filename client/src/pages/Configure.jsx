@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useExam } from '../context/ExamContext'
+import DossierLoader from '../components/DossierLoader'
 
-const Configure = () => {
+function Configure() {
     const { materials, examConfig, setExamConfig, setGeneratedPaper } = useExam()
     const [status, setStatus] = useState('')
     const [loading, setLoading] = useState(false)
+    const navigate = useNavigate()
     const [selectedTags, setSelectedTags] = useState([])
 
     // Separate notes and PYQs
@@ -96,12 +99,12 @@ const Configure = () => {
         try {
             const response = await axios.post('http://localhost:3000/api/generate/paper', examConfig)
             setGeneratedPaper(response.data.paper)
-            setStatus('Dossier compiled. Proceed to the Exam.')
+            setStatus('Dossier compiled. Redirecting to Exam...')
+            setTimeout(() => navigate('/exam'), 1500)
         } catch (error) {
             setStatus(error.response?.data?.error || 'Compilation failed. Try again.')
+            setLoading(false)
         }
-
-        setLoading(false)
     }
 
     const labelStyle = {
@@ -139,283 +142,314 @@ const Configure = () => {
             </p>
 
             <div style={{ borderTop: '1px solid var(--manila-dark)', paddingTop: '28px' }}>
-
-                {/* ── TAG FILTER ── */}
-                {allTags.length > 0 && (
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={labelStyle}>Filter by Tags</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                            {allTags.map(tag => (
-                                <button
-                                    key={tag}
-                                    type="button"
-                                    onClick={() => toggleTag(tag)}
-                                    style={{
-                                        padding: '4px 12px',
-                                        fontSize: '12px',
-                                        fontFamily: 'var(--font-body)',
-                                        letterSpacing: '0.5px',
-                                        border: '1px solid',
-                                        borderColor: selectedTags.includes(tag) ? 'var(--ink)' : 'var(--manila-dark)',
-                                        background: selectedTags.includes(tag) ? 'var(--ink)' : 'transparent',
-                                        color: selectedTags.includes(tag) ? 'var(--manila)' : 'var(--graphite)',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s ease'
-                                    }}
-                                >
-                                    {tag}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── MATERIAL SELECTION (multi-select checkboxes) ── */}
-                <div style={{ marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <label style={{ ...labelStyle, marginBottom: 0 }}>
-                            Source Materials ({(examConfig.materialIds || []).length} selected)
-                        </label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button type="button" onClick={selectAllFiltered} style={{
-                                fontSize: '10px', background: 'none', border: 'none',
-                                color: 'var(--graphite)', cursor: 'pointer', textDecoration: 'underline',
-                                fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '1px'
-                            }}>
-                                All
-                            </button>
-                            <button type="button" onClick={clearSelection} style={{
-                                fontSize: '10px', background: 'none', border: 'none',
-                                color: 'var(--graphite)', cursor: 'pointer', textDecoration: 'underline',
-                                fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '1px'
-                            }}>
-                                Clear
-                            </button>
-                        </div>
-                    </div>
-
-                    {filteredMaterials.length === 0 ? (
-                        <p style={{ fontSize: '13px', color: 'var(--graphite)', fontFamily: 'var(--font-accent)' }}>
-                            {notesMaterials.length === 0
-                                ? 'No study materials uploaded yet.'
-                                : 'No materials match the selected tags.'}
-                        </p>
-                    ) : (
-                        <div style={{
-                            border: '1px solid var(--manila-dark)',
-                            maxHeight: '200px',
-                            overflowY: 'auto'
-                        }}>
-                            {filteredMaterials.map(material => {
-                                const isSelected = (examConfig.materialIds || []).includes(material._id)
-                                return (
-                                    <label
-                                        key={material._id}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '10px',
-                                            padding: '10px 12px',
-                                            cursor: 'pointer',
-                                            borderBottom: '1px solid var(--manila-dark)',
-                                            background: isSelected ? 'var(--manila-light)' : 'transparent',
-                                            transition: 'background 0.1s ease'
-                                        }}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => toggleMaterial(material._id)}
-                                            style={{ accentColor: 'var(--red)' }}
-                                        />
-                                        <div>
-                                            <span style={{ fontSize: '13px', color: 'var(--ink)', fontWeight: isSelected ? '700' : '400' }}>
-                                                {material.filename}
-                                            </span>
-                                            {material.topics && material.topics.length > 0 && (
-                                                <div style={{ display: 'flex', gap: '3px', marginTop: '2px', flexWrap: 'wrap' }}>
-                                                    {material.topics.map(t => (
-                                                        <span key={t} style={{
-                                                            fontSize: '9px', padding: '1px 5px',
-                                                            border: '1px solid var(--manila-dark)',
-                                                            color: 'var(--graphite)', fontFamily: 'var(--font-body)'
-                                                        }}>
-                                                            {t}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </label>
-                                )
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* ── QUESTION MODE (hidden for follow_pattern) ── */}
-                {!isFollowPattern && (
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={labelStyle}>Question Mode</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {['single', 'mixed'].map(m => (
-                                <button
-                                    key={m}
-                                    type="button"
-                                    onClick={() => handleChange('mode', m)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '10px',
-                                        fontFamily: 'var(--font-body)',
-                                        fontSize: '13px',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '1px',
-                                        border: '2px solid',
-                                        borderColor: examConfig.mode === m ? 'var(--ink)' : 'var(--manila-dark)',
-                                        background: examConfig.mode === m ? 'var(--ink)' : 'transparent',
-                                        color: examConfig.mode === m ? 'var(--manila)' : 'var(--graphite)',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s ease',
-                                        fontWeight: examConfig.mode === m ? '700' : '400'
-                                    }}
-                                >
-                                    {m === 'single' ? 'Single Type' : 'Mixed Types'}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── SINGLE MODE: type + count ── */}
-                {!isFollowPattern && examConfig.mode === 'single' && (
+                {!loading ? (
                     <>
+                        {/* ── TAG FILTER ── */}
+                        {allTags.length > 0 && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={labelStyle}>Filter by Tags</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                    {allTags.map(tag => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => toggleTag(tag)}
+                                            style={{
+                                                padding: '4px 12px',
+                                                fontSize: '12px',
+                                                fontFamily: 'var(--font-body)',
+                                                letterSpacing: '0.5px',
+                                                border: '1px solid',
+                                                borderColor: selectedTags.includes(tag) ? 'var(--ink)' : 'var(--manila-dark)',
+                                                background: selectedTags.includes(tag) ? 'var(--ink)' : 'transparent',
+                                                color: selectedTags.includes(tag) ? 'var(--manila)' : 'var(--graphite)',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease'
+                                            }}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── MATERIAL SELECTION (multi-select checkboxes) ── */}
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={labelStyle}>Question Format</label>
-                            <select
-                                value={examConfig.type}
-                                onChange={(e) => handleChange('type', e.target.value)}
-                                className="select-field"
-                            >
-                                <option value="mcq">Multiple Choice</option>
-                                <option value="short">Short Answer</option>
-                                <option value="long">Long Answer</option>
-                            </select>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <label style={{ ...labelStyle, marginBottom: 0 }}>
+                                    Source Materials ({(examConfig.materialIds || []).length} selected)
+                                </label>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button type="button" onClick={selectAllFiltered} style={{
+                                        fontSize: '10px', background: 'none', border: 'none',
+                                        color: 'var(--graphite)', cursor: 'pointer', textDecoration: 'underline',
+                                        fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '1px'
+                                    }}>
+                                        All
+                                    </button>
+                                    <button type="button" onClick={clearSelection} style={{
+                                        fontSize: '10px', background: 'none', border: 'none',
+                                        color: 'var(--graphite)', cursor: 'pointer', textDecoration: 'underline',
+                                        fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '1px'
+                                    }}>
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            {filteredMaterials.length === 0 ? (
+                                <p style={{ fontSize: '13px', color: 'var(--graphite)', fontFamily: 'var(--font-accent)' }}>
+                                    {notesMaterials.length === 0
+                                        ? 'No study materials uploaded yet.'
+                                        : 'No materials match the selected tags.'}
+                                </p>
+                            ) : (
+                                <div style={{
+                                    border: '1px solid var(--manila-dark)',
+                                    maxHeight: '200px',
+                                    overflowY: 'auto'
+                                }}>
+                                    {filteredMaterials.map(material => {
+                                        const isSelected = (examConfig.materialIds || []).includes(material._id)
+                                        return (
+                                            <label
+                                                key={material._id}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    padding: '10px 12px',
+                                                    cursor: 'pointer',
+                                                    borderBottom: '1px solid var(--manila-dark)',
+                                                    background: isSelected ? 'var(--manila-light)' : 'transparent',
+                                                    transition: 'background 0.1s ease'
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleMaterial(material._id)}
+                                                    style={{ accentColor: 'var(--red)' }}
+                                                />
+                                                <div>
+                                                    <span style={{ fontSize: '13px', color: 'var(--ink)', fontWeight: isSelected ? '700' : '400' }}>
+                                                        {material.filename}
+                                                    </span>
+                                                    {material.topics && material.topics.length > 0 && (
+                                                        <div style={{ display: 'flex', gap: '3px', marginTop: '2px', flexWrap: 'wrap' }}>
+                                                            {material.topics.map(t => (
+                                                                <span key={t} style={{
+                                                                    fontSize: '9px', padding: '1px 5px',
+                                                                    border: '1px solid var(--manila-dark)',
+                                                                    color: 'var(--graphite)', fontFamily: 'var(--font-body)'
+                                                                }}>
+                                                                    {t}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </label>
+                                        )
+                                    })}
+                                </div>
+                            )}
                         </div>
 
+                        {/* ── QUESTION MODE (hidden for follow_pattern) ── */}
+                        {!isFollowPattern && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={labelStyle}>Question Mode</label>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {['single', 'mixed'].map(m => (
+                                        <button
+                                            key={m}
+                                            type="button"
+                                            onClick={() => handleChange('mode', m)}
+                                            style={{
+                                                flex: 1,
+                                                padding: '10px',
+                                                fontFamily: 'var(--font-body)',
+                                                fontSize: '13px',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '1px',
+                                                border: '2px solid',
+                                                borderColor: examConfig.mode === m ? 'var(--ink)' : 'var(--manila-dark)',
+                                                background: examConfig.mode === m ? 'var(--ink)' : 'transparent',
+                                                color: examConfig.mode === m ? 'var(--manila)' : 'var(--graphite)',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease',
+                                                fontWeight: examConfig.mode === m ? '700' : '400'
+                                            }}
+                                        >
+                                            {m === 'single' ? 'Single Type' : 'Mixed Types'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── SINGLE MODE: type + count ── */}
+                        {!isFollowPattern && examConfig.mode === 'single' && (
+                            <>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={labelStyle}>Question Format</label>
+                                    <select
+                                        value={examConfig.type}
+                                        onChange={(e) => handleChange('type', e.target.value)}
+                                        className="select-field"
+                                    >
+                                        <option value="mcq">Multiple Choice</option>
+                                        <option value="short">Short Answer</option>
+                                        <option value="long">Long Answer</option>
+                                    </select>
+                                </div>
+
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={labelStyle}>Number of Questions</label>
+                                    <input
+                                        type="number"
+                                        value={examConfig.count}
+                                        onChange={(e) => handleChange('count', Number(e.target.value))}
+                                        min="1"
+                                        max="50"
+                                        className="input"
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {/* ── MIXED MODE: per-type counts ── */}
+                        {!isFollowPattern && examConfig.mode === 'mixed' && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={labelStyle}>Questions per Type (Total: {totalMixed})</label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    {[
+                                        { key: 'mcq', label: 'MCQ' },
+                                        { key: 'short', label: 'Short' },
+                                        { key: 'long', label: 'Long' }
+                                    ].map(({ key, label }) => (
+                                        <div key={key} style={{ flex: 1 }}>
+                                            <label style={{
+                                                display: 'block',
+                                                fontSize: '10px',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '1px',
+                                                color: 'var(--graphite)',
+                                                marginBottom: '4px',
+                                                textAlign: 'center'
+                                            }}>
+                                                {label}
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={examConfig.typeCounts?.[key] || 0}
+                                                onChange={(e) => handleTypeCount(key, e.target.value)}
+                                                min="0"
+                                                max="50"
+                                                className="input"
+                                                style={{ textAlign: 'center' }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {/* ── TIMER ── */}
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={labelStyle}>Number of Questions</label>
+                            <label style={labelStyle}>Time Limit (minutes)</label>
                             <input
                                 type="number"
-                                value={examConfig.count}
-                                onChange={(e) => handleChange('count', Number(e.target.value))}
+                                value={examConfig.timerMinutes || 30}
+                                onChange={(e) => handleChange('timerMinutes', Math.max(1, Math.min(180, Number(e.target.value) || 30)))}
                                 min="1"
-                                max="50"
+                                max="180"
                                 className="input"
                             />
                         </div>
-                    </>
-                )}
-
-                {/* ── MIXED MODE: per-type counts ── */}
-                {!isFollowPattern && examConfig.mode === 'mixed' && (
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={labelStyle}>Questions per Type (Total: {totalMixed})</label>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            {[
-                                { key: 'mcq', label: 'MCQ' },
-                                { key: 'short', label: 'Short' },
-                                { key: 'long', label: 'Long' }
-                            ].map(({ key, label }) => (
-                                <div key={key} style={{ flex: 1 }}>
-                                    <label style={{
-                                        display: 'block',
-                                        fontSize: '10px',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '1px',
-                                        color: 'var(--graphite)',
-                                        marginBottom: '4px',
-                                        textAlign: 'center'
-                                    }}>
-                                        {label}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={examConfig.typeCounts?.[key] || 0}
-                                        onChange={(e) => handleTypeCount(key, e.target.value)}
-                                        min="0"
-                                        max="50"
-                                        className="input"
-                                        style={{ textAlign: 'center' }}
-                                    />
-                                </div>
-                            ))}
+                        {/* ── DIFFICULTY ── */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={labelStyle}>Threat Level</label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                {['easy', 'medium', 'hard'].map((level) => (
+                                    <button
+                                        key={level}
+                                        type="button"
+                                        onClick={() => handleChange('difficulty', level)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px',
+                                            fontFamily: 'var(--font-body)',
+                                            fontSize: '13px',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '1px',
+                                            border: '2px solid',
+                                            borderColor: examConfig.difficulty === level ? 'var(--red)' : 'var(--manila-dark)',
+                                            background: examConfig.difficulty === level ? 'var(--red)' : 'transparent',
+                                            color: examConfig.difficulty === level ? 'var(--manila)' : 'var(--graphite)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease',
+                                            fontWeight: examConfig.difficulty === level ? '700' : '400'
+                                        }}
+                                    >
+                                        {level === 'easy' ? '◇ Easy' : level === 'medium' ? '◆ Medium' : '◆◆ Hard'}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
 
-                {/* ── DIFFICULTY ── */}
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={labelStyle}>Threat Level</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        {['easy', 'medium', 'hard'].map((level) => (
-                            <button
-                                key={level}
-                                type="button"
-                                onClick={() => handleChange('difficulty', level)}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px',
-                                    fontFamily: 'var(--font-body)',
-                                    fontSize: '13px',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '1px',
-                                    border: '2px solid',
-                                    borderColor: examConfig.difficulty === level ? 'var(--red)' : 'var(--manila-dark)',
-                                    background: examConfig.difficulty === level ? 'var(--red)' : 'transparent',
-                                    color: examConfig.difficulty === level ? 'var(--manila)' : 'var(--graphite)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s ease',
-                                    fontWeight: examConfig.difficulty === level ? '700' : '400'
-                                }}
-                            >
-                                {level === 'easy' ? '◇ Easy' : level === 'medium' ? '◆ Medium' : '◆◆ Hard'}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                        {/* ── PYQ STRATEGY ── */}
+                        {hasPYQs && (
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={labelStyle}>Previous Paper Strategy</label>
+                                <select
+                                    value={examConfig.paperStrategy}
+                                    onChange={(e) => handleChange('paperStrategy', e.target.value)}
+                                    className="select-field"
+                                >
+                                    <option value="material_only">Use as study material only</option>
+                                    <option value="follow_pattern">Follow same paper pattern</option>
+                                    <option value="similar_questions">Include similar style questions</option>
+                                    <option value="avoid_questions">Avoid these questions entirely</option>
+                                </select>
+                            </div>
+                        )}
 
-                {/* ── PYQ STRATEGY ── */}
-                {hasPYQs && (
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={labelStyle}>Previous Paper Strategy</label>
-                        <select
-                            value={examConfig.paperStrategy}
-                            onChange={(e) => handleChange('paperStrategy', e.target.value)}
-                            className="select-field"
+                        <button
+                            onClick={handleGenerate}
+                            className="btn btn-red"
+                            style={{ width: '100%' }}
+                            disabled={loading}
                         >
-                            <option value="material_only">Use as study material only</option>
-                            <option value="follow_pattern">Follow same paper pattern</option>
-                            <option value="similar_questions">Include similar style questions</option>
-                            <option value="avoid_questions">Avoid these questions entirely</option>
-                        </select>
+                            Compile Dossier →
+                        </button>
+                    </>
+                ) : (
+                    <div style={{ marginTop: '28px' }}>
+                        <DossierLoader
+                            title="Compiling"
+                            subtitle="Generating Dossier..."
+                            messages={[
+                                'Scanning uploaded materials...',
+                                'Extracting relevant sections...',
+                                'Cross-referencing intel sources...',
+                                'Constructing questions from material...',
+                                'Calibrating difficulty parameters...',
+                                'Formatting operation brief...',
+                                'Running final verification...',
+                                'Almost there, Agent...'
+                            ]}
+                        />
                     </div>
                 )}
-
-                <button
-                    onClick={handleGenerate}
-                    className="btn btn-red"
-                    style={{ width: '100%' }}
-                    disabled={loading}
-                >
-                    {loading ? 'Compiling Dossier...' : 'Compile Dossier →'}
-                </button>
             </div>
 
             {status && (
                 <p style={{
                     marginTop: '16px',
                     fontSize: '13px',
-                    color: status.includes('Proceed') ? '#2d6a2e' : status.includes('failed') ? 'var(--red)' : 'var(--graphite)',
+                    color: status.includes('Redirecting') ? '#2d6a2e' : status.includes('failed') ? 'var(--red)' : 'var(--graphite)',
                     fontFamily: 'var(--font-accent)'
                 }}>
                     {status}
